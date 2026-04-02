@@ -16,4 +16,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Don't fail the build on TypeScript errors — let tsc handle that separately
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress circular dependency warnings
+        if (warning.code === "CIRCULAR_DEPENDENCY") return;
+        warn(warning);
+      },
+    },
+  },
 });
