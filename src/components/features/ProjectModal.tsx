@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   X, Globe, Smartphone, Download, Eye, Copy, ExternalLink,
   Shield, GitBranch, Calendar, HardDrive, Package, CheckCircle,
-  History, RotateCcw, Loader2, CheckCircle2, XCircle, Clock,
+  History, RotateCcw, Loader2, CheckCircle2, XCircle, Clock, Link2, Globe2,
 } from "lucide-react";
 import { Project } from "@/types";
 import { formatFileSize, formatDate, formatRelativeTime } from "@/lib/utils";
@@ -22,6 +22,35 @@ const historyStatusConfig = {
   failed: { icon: XCircle, color: "text-red-400", label: "Failed" },
   building: { icon: Clock, color: "text-blue-400", label: "Building" },
 };
+
+function LinkRow({ label, url, icon }: { label: string; url: string; icon: React.ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    toast.success("Link copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="flex items-center gap-2 p-2 bg-white/3 rounded-lg border border-white/5">
+      <span className="flex-shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+        <p className="font-mono text-xs text-blue-400 truncate">{url}</p>
+      </div>
+      <button onClick={handleCopy}
+        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
+        {copied
+          ? <CheckCircle className="w-3 h-3 text-emerald-400" />
+          : <Copy className="w-3 h-3 text-muted-foreground" />}
+      </button>
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0">
+        <ExternalLink className="w-3 h-3 text-muted-foreground" />
+      </a>
+    </div>
+  );
+}
 
 export default function ProjectModal({ project, onClose, onProjectUpdate }: ProjectModalProps) {
   const url = project.type === "web" ? project.previewUrl : project.downloadUrl;
@@ -166,6 +195,40 @@ export default function ProjectModal({ project, onClose, onProjectUpdate }: Proj
                   <p className="text-xs text-muted-foreground">{formatFileSize(project.fileSize).split(" ")[1]}</p>
                 </div>
               </div>
+
+              {/* Links Section */}
+              {(project.downloadUrl || project.previewUrl || project.custom_domain) && (
+                <div className="p-4 mx-4 mt-3 bg-white/3 rounded-xl border border-white/8 space-y-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Link2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-xs font-semibold">الروابط / Links</span>
+                  </div>
+
+                  {project.downloadUrl && (
+                    <LinkRow
+                      label="Download URL"
+                      url={project.downloadUrl}
+                      icon={<Download className="w-3 h-3 text-purple-400" />}
+                    />
+                  )}
+
+                  {project.previewUrl && project.previewUrl !== project.downloadUrl && (
+                    <LinkRow
+                      label="Preview URL"
+                      url={project.previewUrl}
+                      icon={<Globe className="w-3 h-3 text-blue-400" />}
+                    />
+                  )}
+
+                  {project.custom_domain && (
+                    <LinkRow
+                      label="Custom Domain"
+                      url={`https://${project.custom_domain}`}
+                      icon={<Globe2 className="w-3 h-3 text-emerald-400" />}
+                    />
+                  )}
+                </div>
+              )}
 
               {/* Details */}
               <div className="p-4 space-y-2">

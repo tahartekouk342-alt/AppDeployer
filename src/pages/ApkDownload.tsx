@@ -5,7 +5,7 @@ import {
   Battery, Rocket, Package, HardDrive, AlertCircle, Globe,
   ArrowLeft, Eye, QrCode,
 } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+
 import { Project } from "@/types";
 import { formatFileSize, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -256,7 +256,13 @@ export default function ApkDownload({ projects = [] }: ApkDownloadProps) {
               {showQr && (
                 <div className="mt-4 flex flex-col items-center gap-3 animate-fade-in">
                   <div className="p-3 bg-white rounded-xl">
-                    <QRCodeSVG value={pageUrl} size={140} bgColor="#ffffff" fgColor="#0f172a" level="M" includeMargin={false} />
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(pageUrl)}&color=0f172a&bgcolor=ffffff`}
+                      alt="QR Code"
+                      width={140}
+                      height={140}
+                      className="rounded"
+                    />
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
                     Scan with your phone camera to open this download page
