@@ -15,10 +15,7 @@ interface FileUploaderProps {
 
 type UploadPhase = "idle" | "uploading" | "scanning" | "deploying" | "done";
 
-function generatePreviewUrl(name: string): string {
-  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
-  return `https://${slug}.appdeployer.app`;
-}
+
 
 export default function FileUploader({ userId, onProjectAdded, onNotify }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -101,14 +98,16 @@ export default function FileUploader({ userId, onProjectAdded, onNotify }: FileU
       file_path: filePath,
       downloads: 0,
       views: 0,
+      // Both APK and ZIP: use the real Supabase Storage public URL
+      downloadUrl: publicUrl,
+      previewUrl: publicUrl,
       ...(isApk
         ? {
-            downloadUrl: publicUrl,
             version: "1.0.0",
             packageName: `com.user.${projectName.toLowerCase().replace(/\s+/g, "")}`,
             iconUrl: `https://picsum.photos/seed/${projectName}/128/128`,
           }
-        : { previewUrl: generatePreviewUrl(projectName) }),
+        : {}),
     };
 
     setPhase("done");

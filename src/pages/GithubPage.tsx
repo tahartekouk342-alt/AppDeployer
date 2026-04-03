@@ -1,10 +1,45 @@
-import { GitBranch, Github, Zap, RefreshCw, CheckCircle, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { GitBranch, Github, Zap, RefreshCw, CheckCircle, Info, Loader2 } from "lucide-react";
 import GithubConnect from "@/components/features/GithubConnect";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+
+interface GithubStats {
+  connected: number;
+  totalBuilds: number;
+  liveRepos: number;
+}
 
 export default function GithubPage() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<GithubStats>({ connected: 0, totalBuilds: 0, liveRepos: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const fetchStats = async () => {
+    if (!user?.id) { setStatsLoading(false); return; }
+    setStatsLoading(true);
+
+    const { data } = await supabase
+      .from("projects")
+      .select("id, status")
+      .not("github_repo", "is", null);
+
+    const all = data || [];
+    setStats({
+      connected: all.length,
+      totalBuilds: all.length,                             // each connected = at least 1 build
+      liveRepos: all.filter((p: any) => p.status === "live").length,
+    });
+    setStatsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, [user?.id]);
+
   const cicdSteps = [
-    { step: "1", label: "Connect Repo", desc: "Link your GitHub repository" },
-    { step: "2", label: "Auto Detect", desc: "We detect ZIP or APK output" },
+    { step: "1", label: "Connect Repo",   desc: "Link your GitHub repository" },
+    { step: "2", label: "Auto Detect",    desc: "We detect ZIP or APK output" },
     { step: "3", label: "Push to Deploy", desc: "Every push triggers a build" },
     { step: "4", label: "Live Instantly", desc: "Deployed in under 60 seconds" },
   ];
@@ -57,21 +92,20 @@ export default function GithubPage() {
           <div className="flex items-start gap-3">
             <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium mb-1">Powered by GitHub Actions</p>
+              <p className="text-sm font-medium mb-1">Powered by GitHub Webhooks</p>
               <p className="text-xs text-muted-foreground">
-                AppDeployer automatically adds a <code className="font-mono text-blue-400 bg-blue-500/10 px-1 rounded">.github/workflows/deploy.yml</code> file to your repository.
-                This workflow builds your project and sends the artifact to AppDeployer on every push to the <code className="font-mono text-purple-400 bg-purple-500/10 px-1 rounded">main</code> branch.
+                AppDeployer listens to GitHub push events via webhooks. When you push to{" "}
+                <code className="font-mono text-purple-400 bg-purple-500/10 px-1 rounded">main</code>, we automatically
+                update your project status and send you a notification.
               </p>
               <div className="mt-3 font-mono text-xs p-3 bg-black/30 rounded-lg border border-white/5 text-muted-foreground space-y-1">
-                <div><span className="text-blue-400">on:</span> push</div>
-                <div className="pl-2"><span className="text-purple-400">branches:</span> [main]</div>
-                <div><span className="text-blue-400">jobs:</span></div>
-                <div className="pl-2"><span className="text-emerald-400">build-and-deploy</span>:</div>
-                <div className="pl-4">runs-on: ubuntu-latest</div>
-                <div className="pl-4 text-muted-foreground/60">... build steps ...</div>
-                <div className="pl-4 flex items-center gap-1">
+                <div><span className="text-blue-400">Webhook URL:</span></div>
+                <div className="pl-2 text-emerald-400 break-all">
+                  {import.meta.env.VITE_SUPABASE_URL}/functions/v1/github-webhook
+                </div>
+                <div className="mt-2 flex items-center gap-1">
                   <CheckCircle className="w-3 h-3 text-emerald-400" />
-                  <span className="text-emerald-400">deploy to AppDeployer</span>
+                  <span className="text-emerald-400">Add this to your repo Settings → Webhooks</span>
                 </div>
               </div>
             </div>
@@ -80,22 +114,34 @@ export default function GithubPage() {
 
         {/* Main Connect Component */}
         <div className="animate-fade-in">
-          <GithubConnect />
+          <GithubConnect userId={user?.id} onRepoConnected={fetchStats} />
         </div>
 
-        {/* Stats Row */}
+        {/* Real Stats Row */}
         <div className="grid grid-cols-3 gap-4 mt-8 animate-fade-in">
-          {[
-            { icon: GitBranch, label: "Repos Connected", value: "3" },
-            { icon: RefreshCw, label: "Total Builds", value: "47" },
-            { icon: CheckCircle, label: "Success Rate", value: "95.7%" },
-          ].map((stat) => (
-            <div key={stat.label} className="glass rounded-xl border border-white/8 p-4 text-center">
-              <stat.icon className="w-5 h-5 text-blue-400 mx-auto mb-2" />
-              <div className="text-xl font-bold">{stat.value}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
+          {statsLoading ? (
+            <div className="col-span-3 flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ))}
+          ) : (
+            <>
+              <div className="glass rounded-xl border border-white/8 p-4 text-center">
+                <GitBranch className="w-5 h-5 text-blue-400 mx-auto mb-2" />
+                <div className="text-xl font-bold">{stats.connected}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Repos Connected</div>
+              </div>
+              <div className="glass rounded-xl border border-white/8 p-4 text-center">
+                <RefreshCw className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+                <div className="text-xl font-bold">{stats.totalBuilds}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Total Builds</div>
+              </div>
+              <div className="glass rounded-xl border border-white/8 p-4 text-center">
+                <CheckCircle className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
+                <div className="text-xl font-bold">{stats.connected > 0 ? Math.round((stats.liveRepos / stats.connected) * 100) : 0}%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Success Rate</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
