@@ -43,7 +43,8 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (event === "SIGNED_IN" && session?.user) {
+      // Handle Google OAuth callback and regular sign-in
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         const authUser = mapSupabaseUser(session.user);
         setUser(authUserToUser(authUser));
         setLoading(false);
@@ -53,6 +54,9 @@ export function useAuth() {
       } else if (event === "TOKEN_REFRESHED" && session?.user) {
         const authUser = mapSupabaseUser(session.user);
         setUser(authUserToUser(authUser));
+      } else if (event === "INITIAL_SESSION" && !session) {
+        // No active session — ensure loading is cleared
+        setLoading(false);
       }
     });
 

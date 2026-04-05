@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Globe, Smartphone, Download, Eye, ExternalLink, Trash2,
   Copy, CheckCircle, Clock, AlertCircle, Shield, ShieldAlert,
-  GitBranch, MoreVertical, Globe2,
+  GitBranch, MoreVertical, Globe2, Share2,
 } from "lucide-react";
 import { Project } from "@/types";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,14 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
 
   const url = project.type === "web" ? project.previewUrl : project.downloadUrl;
 
+  // Build the public share link
+  const getShareLink = (): string => {
+    const appBase = window.location.origin; // e.g. https://myapp.vercel.app
+    if (project.custom_domain) return `https://${project.custom_domain}`;
+    if (project.type === "apk") return `${appBase}/download/${project.id}`;
+    return url || appBase;
+  };
+
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (url) {
@@ -71,6 +79,15 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
       toast.success("Link copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleShareCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const link = getShareLink();
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast.success("Share link copied!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -116,7 +133,9 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
               <h3 className="font-semibold text-sm truncate">{project.name}</h3>
               <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
                 {project.custom_domain ? (
-                  <span className="text-blue-400">{project.custom_domain}</span>
+                  <span className="text-emerald-400">https://{project.custom_domain}</span>
+                ) : project.type === "apk" ? (
+                  <span className="text-blue-400">{window.location.origin}/download/{project.id}</span>
                 ) : (
                   url || project.fileName
                 )}
@@ -131,10 +150,15 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-44 glass-strong rounded-xl border border-white/10 shadow-xl overflow-hidden z-10 animate-scale-in">
+                  <button onClick={handleShareCopy}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">
+                    {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 text-blue-400" />}
+                    Copy Share Link
+                  </button>
                   <button onClick={handleCopy}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">
-                    {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
-                    Copy Link
+                    <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                    Copy File URL
                   </button>
                   {url && (
                     <a href={url} target="_blank" rel="noopener noreferrer"
