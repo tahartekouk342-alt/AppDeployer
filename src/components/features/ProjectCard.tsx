@@ -61,30 +61,38 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
   const StatusIcon = status.icon;
   const SecurityIcon = security.icon;
 
-  const url = project.type === "web" ? project.previewUrl : project.downloadUrl;
-
-  // Build the public share link
+  // Build the canonical share / display link
   const getShareLink = (): string => {
-    const appBase = window.location.origin; // e.g. https://myapp.vercel.app
     if (project.custom_domain) return `https://${project.custom_domain}`;
-    if (project.type === "apk") return `${appBase}/download/${project.id}`;
-    return url || appBase;
+    if (project.type === "apk") return `${window.location.origin}/download/${project.id}`;
+    // Web projects: prefer stored previewUrl (appdeployer.app slug), fallback to storage URL
+    const slug = project.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30) || `project-${project.id.slice(0, 8)}`;
+    if (project.previewUrl && project.previewUrl.includes("appdeployer.app")) return project.previewUrl;
+    return `https://${slug}.appdeployer.app`;
   };
+
+  const url = project.type === "apk"
+    ? `${window.location.origin}/download/${project.id}`
+    : getShareLink();
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (url) {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success("Link copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
-    }
+    const link = getShareLink();
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast.success("Link copied!");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShareCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const link = getShareLink();
-    navigator.clipboard.writeText(link);
+    navigator.clipboard.writeText(getShareLink());
     setCopied(true);
     toast.success("Share link copied!");
     setTimeout(() => setCopied(false), 2000);
@@ -134,10 +142,8 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
               <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
                 {project.custom_domain ? (
                   <span className="text-emerald-400">https://{project.custom_domain}</span>
-                ) : project.type === "apk" ? (
-                  <span className="text-blue-400">{window.location.origin}/download/{project.id}</span>
                 ) : (
-                  url || project.fileName
+                  <span className="text-blue-400">{getShareLink()}</span>
                 )}
               </p>
             </div>
@@ -160,14 +166,16 @@ export default function ProjectCard({ project, onDelete, onClick, onUpdateDomain
                     <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                     Copy File URL
                   </button>
-                  {url && (
-                    <a href={url} target="_blank" rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">
-                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-                      Open URL
-                    </a>
-                  )}
+                  <a
+                    href={project.downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                    Open File URL
+                  </a>
                   <button
                     onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setShowDomain(!showDomain); }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors">

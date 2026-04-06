@@ -86,6 +86,15 @@ export default function FileUploader({ userId, onProjectAdded, onNotify }: FileU
       .getPublicUrl(filePath);
     const publicUrl = urlData.publicUrl;
 
+    // Generate appdeployer.app subdomain slug from project name
+    const slug = projectName.trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 30) || `project-${Date.now()}`;
+
     const newProject: Omit<Project, "id"> = {
       name: projectName.trim(),
       type: isApk ? "apk" : "web",
@@ -98,13 +107,15 @@ export default function FileUploader({ userId, onProjectAdded, onNotify }: FileU
       file_path: filePath,
       downloads: 0,
       views: 0,
-      // Both APK and ZIP: use the real Supabase Storage public URL
       downloadUrl: publicUrl,
-      previewUrl: publicUrl,
+      // previewUrl stores the display link (appdeployer.app format)
+      previewUrl: isApk
+        ? `${window.location.origin}/download/PENDING`  // will be replaced after insert
+        : `https://${slug}.appdeployer.app`,
       ...(isApk
         ? {
             version: "1.0.0",
-            packageName: `com.user.${projectName.toLowerCase().replace(/\s+/g, "")}`,
+            packageName: `com.user.${projectName.trim().toLowerCase().replace(/\s+/g, "")}`,
             iconUrl: `https://picsum.photos/seed/${projectName}/128/128`,
           }
         : {}),
